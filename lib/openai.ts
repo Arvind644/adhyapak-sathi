@@ -24,32 +24,78 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   return response.data[0].embedding
 }
 
+interface LessonPlanSummary {
+  totalCount: number
+  plans: Array<{
+    name: string
+    tags: string[]
+    subject?: string
+    grade?: string
+    topic?: string
+    uploadedAt: string
+  }>
+}
+
 export async function generateResponse(
   query: string,
   contextChunks: Array<{ text: string; source: string; metadata?: any }>,
-  responseType: string
+  responseType: string,
+  lessonPlanSummary?: LessonPlanSummary
 ): Promise<string> {
-  const contextText = contextChunks
-    .map((chunk, idx) => `[Source ${idx + 1}: ${chunk.source}]\n${chunk.text}`)
-    .join('\n\n---\n\n')
+  // Prepare context if available
+  const hasContext = contextChunks.length > 0
+  const contextText = hasContext 
+    ? contextChunks.map((chunk, idx) => `[Source ${idx + 1}: ${chunk.source}]\n${chunk.text}`).join('\n\n---\n\n')
+    : ''
 
-  const systemPrompt = `You are a helpful pedagogical assistant for teachers in India. Your role is to provide clear, practical, and contextually relevant guidance based on official teaching manuals and pedagogy practices.
+  // Prepare lesson plan summary
+  const hasSummary = lessonPlanSummary && lessonPlanSummary.totalCount > 0
+  const summaryText = hasSummary
+    ? `
+TEACHER'S LESSON PLANS (${lessonPlanSummary.totalCount} total):
+${lessonPlanSummary.plans.map((p, i) => 
+  `${i + 1}. "${p.name}"${p.subject ? ` - Subject: ${p.subject}` : ''}${p.grade ? `, Grade: ${p.grade}` : ''}${p.topic ? `, Topic: ${p.topic}` : ''} (uploaded: ${p.uploadedAt})`
+).join('\n')}`
+    : 'TEACHER\'S LESSON PLANS: None uploaded yet.'
 
-Guidelines:
-- Provide actionable, classroom-ready advice
-- Reference specific sources when possible
-- Use simple, clear language
-- Be culturally sensitive and context-aware
-- If information is not in the provided context, say so clearly
+  const systemPrompt = `You are a friendly and helpful pedagogical assistant for teachers in India called "Adhyapak Saathi" (Teacher's Companion).
 
-Response Format: ${getResponseTypeInstructions(responseType)}`
+YOUR BEHAVIOR:
+1. For casual conversation (greetings like "hi", "hello", "how are you", small talk, thank you, etc.):
+   - Respond naturally and briefly like a friendly colleague
+   - DO NOT mention lesson plan data unless asked
+   - Keep it short and warm (1-2 sentences)
 
-  const userPrompt = `Teacher's Question: ${query}
+2. For questions about the teacher's data (like "how many lesson plans", "what have I uploaded", "list my files"):
+   - Use the TEACHER'S LESSON PLANS summary provided below to answer accurately
+   - Give specific counts and names
 
-Relevant Context from Teaching Materials:
+3. For teaching-related questions (about lessons, pedagogy, classroom activities, students, etc.):
+   - Use the provided context from the teacher's lesson plans if relevant
+   - Provide actionable, classroom-ready advice
+   - Be specific and practical
+   - Reference the lesson plan sources when using them
+
+4. For questions unrelated to teaching or the provided context:
+   - Answer helpfully based on your general knowledge
+   - DO NOT force lesson plan content into unrelated questions
+
+IMPORTANT: YOU decide when the lesson plan context is relevant. Don't use it just because it's provided.
+
+${summaryText}
+
+${hasContext ? `Response Format (use ONLY for teaching questions): ${getResponseTypeInstructions(responseType)}` : ''}`
+
+  const userPrompt = hasContext 
+    ? `Teacher says: ${query}
+
+Relevant Content from Lesson Plans:
 ${contextText}
 
-Please provide a helpful response based on the context above. If the context doesn't fully answer the question, acknowledge this and provide the best guidance you can based on general pedagogical principles.`
+Respond appropriately.`
+    : `Teacher says: ${query}
+
+Respond appropriately.`
 
   const response = await openai.chat.completions.create({
     model: CHAT_MODEL,

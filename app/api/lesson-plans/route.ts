@@ -2,8 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { uploadFile } from '@/lib/vercel-blob'
-import { processDocument } from '@/lib/document-processor'
-import { createDocumentChunks } from '@/lib/document-chunks'
+import { extractText } from '@/lib/document-processor'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,16 +75,21 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    console.log(`Processing file: ${file.name} (${file.size} bytes)`)
+    
     // Upload file to Vercel Blob Storage
     const fileUrl = await uploadFile(
       file,
       `lesson-plans/${dbUser.id}/${Date.now()}-${file.name}`
     )
+    console.log(`✓ File uploaded to blob storage`)
 
-    // Process document (extract text and chunk)
-    const processed = await processDocument(file, docType)
+    // Extract text from document (no embeddings needed!)
+    console.log(`Extracting text...`)
+    const extractedText = await extractText(file, docType)
+    console.log(`✓ Extracted ${extractedText.length} characters`)
 
-    // Create lesson plan record
+    // Create lesson plan record with extracted text
     const lessonPlan = await db.lessonPlan.create({
       data: {
         userId: dbUser.id,
@@ -94,12 +98,10 @@ export async function POST(req: NextRequest) {
         fileSize: file.size,
         tags,
         metadata: metadata as any,
-        extractedText: processed.text,
+        extractedText, // Store full text for search
       },
     })
-
-    // Generate embeddings and create chunks using Prisma helper
-    await createDocumentChunks(lessonPlan.id, 'lesson_plan', processed.chunks)
+    console.log(`✓ Lesson plan saved to database`)
 
     return NextResponse.json({
       id: lessonPlan.id,

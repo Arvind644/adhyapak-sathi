@@ -1,65 +1,14 @@
-// Document processing utilities
-import pdfParse from 'pdf-parse'
-import mammoth from 'mammoth'
+// Document processing utilities - Simple text extraction (NO EMBEDDINGS)
+// This is much faster and uses minimal memory
 
-export interface ProcessedDocument {
-  text: string
-  chunks: Array<{
-    text: string
-    index: number
-    metadata?: Record<string, any>
-  }>
-}
-
-const CHUNK_SIZE = 1000 // characters
-const CHUNK_OVERLAP = 200 // characters
-
-export function chunkText(text: string, metadata?: Record<string, any>): Array<{
-  text: string
-  index: number
-  metadata?: Record<string, any>
-}> {
-  const chunks: Array<{ text: string; index: number; metadata?: Record<string, any> }> = []
-  let index = 0
-  let start = 0
-
-  while (start < text.length) {
-    const end = Math.min(start + CHUNK_SIZE, text.length)
-    let chunkText = text.slice(start, end)
-
-    // Try to break at sentence boundaries
-    if (end < text.length) {
-      const lastPeriod = chunkText.lastIndexOf('.')
-      const lastNewline = chunkText.lastIndexOf('\n')
-      const breakPoint = Math.max(lastPeriod, lastNewline)
-      
-      if (breakPoint > CHUNK_SIZE * 0.5) {
-        chunkText = text.slice(start, start + breakPoint + 1)
-        start = start + breakPoint + 1
-      } else {
-        start = end
-      }
-    } else {
-      start = end
-    }
-
-    chunks.push({
-      text: chunkText.trim(),
-      index,
-      metadata,
-    })
-
-    index++
-    start -= CHUNK_OVERLAP // Overlap for context
-  }
-
-  return chunks
-}
-
-// PDF processing
-export async function processPDF(buffer: Buffer): Promise<string> {
+// PDF processing - DYNAMIC IMPORT to prevent memory bloat at module load
+async function processPDF(buffer: Buffer): Promise<string> {
   try {
+    console.log('Loading pdf-parse library...')
+    const pdfParse = (await import('pdf-parse')).default
+    console.log('Parsing PDF...')
     const data = await pdfParse(buffer)
+    console.log('PDF parsed successfully')
     return data.text
   } catch (error) {
     console.error('Error processing PDF:', error)
@@ -67,21 +16,49 @@ export async function processPDF(buffer: Buffer): Promise<string> {
   }
 }
 
-// Word document processing
-export async function processWord(buffer: Buffer): Promise<string> {
+// Word document processing using simple XML extraction
+// DOCX files are ZIP archives containing XML
+async function processWord(buffer: Buffer): Promise<string> {
   try {
-    const result = await mammoth.extractRawText({ buffer })
-    return result.value
+    console.log('Loading JSZip library...')
+    const JSZip = (await import('jszip')).default
+    
+    console.log('Extracting DOCX content...')
+    const zip = await JSZip.loadAsync(buffer)
+    const documentXml = await zip.file('word/document.xml')?.async('string')
+    
+    if (!documentXml) {
+      throw new Error('Invalid Word document structure')
+    }
+    
+    // Extract text from XML by removing tags
+    const text = documentXml
+      .replace(/<[^>]+>/g, ' ')  // Remove XML tags
+      .replace(/&nbsp;/g, ' ')   // Replace &nbsp;
+      .replace(/&lt;/g, '<')     // Decode entities
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')      // Normalize whitespace
+      .trim()
+    
+    console.log('DOCX text extracted successfully')
+    return text
   } catch (error) {
     console.error('Error processing Word document:', error)
     throw new Error('Failed to process Word document. Please ensure the file is a valid Word document.')
   }
 }
 
-export async function processDocument(
+/**
+ * Extract text from a document file (PDF or Word)
+ * No chunking or embeddings - just plain text extraction
+ */
+export async function extractText(
   file: File,
   type: 'pdf' | 'word'
-): Promise<ProcessedDocument> {
+): Promise<string> {
+  console.log(`Converting file to buffer...`)
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
@@ -92,15 +69,18 @@ export async function processDocument(
     text = await processWord(buffer)
   }
 
-  const chunks = chunkText(text, {
-    fileName: file.name,
-    fileType: type,
-    fileSize: file.size,
-  })
+  // Clean up the text
+  text = text
+    .replace(/\s+/g, ' ')  // Normalize whitespace
+    .trim()
 
-  return {
-    text,
-    chunks,
+  // Limit text size (max ~100 pages worth of text)
+  const MAX_TEXT_LENGTH = 200000
+  if (text.length > MAX_TEXT_LENGTH) {
+    console.warn(`Document text too large (${text.length} chars), truncating to ${MAX_TEXT_LENGTH} chars`)
+    text = text.substring(0, MAX_TEXT_LENGTH)
   }
+
+  return text
 }
 

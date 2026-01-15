@@ -1,8 +1,8 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { hybridSearch } from '@/lib/vector-search'
-import { generateResponse, generateEmbedding } from '@/lib/openai'
+import { searchDocuments, getRecentLessonPlanContext } from '@/lib/text-search'
+import { generateResponse } from '@/lib/openai'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,22 +47,46 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Perform hybrid search
-    const searchResults = await hybridSearch(query, dbUser.id, 3)
+    // Get user's lesson plan summary (for questions about their data)
+    const allLessonPlans = await db.lessonPlan.findMany({
+      where: { userId: dbUser.id },
+      select: {
+        id: true,
+        fileName: true,
+        tags: true,
+        metadata: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
 
-    // Prepare context chunks for response generation
+    // Search for relevant content from user's lesson plans
+    let searchResults = await searchDocuments(query, dbUser.id, 3)
+    
+    // Prepare context for AI - let the AI decide if it's relevant
     const contextChunks = searchResults.map((result) => ({
-      text: result.chunkText,
-      source: result.documentType === 'knowledge_base'
-        ? 'Official Teaching Manual'
-        : 'Your Lesson Plan',
-      metadata: result.metadata,
+      text: result.text,
+      source: result.fileName || 'Your Lesson Plan',
+      metadata: { documentType: result.documentType },
     }))
 
-    // Generate response using OpenAI
+    // Prepare lesson plan summary for AI
+    const lessonPlanSummary = {
+      totalCount: allLessonPlans.length,
+      plans: allLessonPlans.map(lp => ({
+        name: lp.fileName,
+        tags: lp.tags,
+        subject: (lp.metadata as any)?.subject,
+        grade: (lp.metadata as any)?.grade,
+        topic: (lp.metadata as any)?.topic,
+        uploadedAt: lp.createdAt.toLocaleDateString(),
+      }))
+    }
+
+    // Generate response using OpenAI - AI will decide when to use context
     let aiResponse: string
     try {
-      aiResponse = await generateResponse(query, contextChunks, responseType)
+      aiResponse = await generateResponse(query, contextChunks, responseType, lessonPlanSummary)
     } catch (error) {
       console.error('OpenAI API error:', error)
       return NextResponse.json(
@@ -73,10 +97,10 @@ export async function POST(req: NextRequest) {
 
     // Store sources used
     const sourcesUsed = searchResults.map((result) => ({
-      chunkId: result.chunkId,
       documentId: result.documentId,
       documentType: result.documentType,
-      similarity: result.similarity,
+      fileName: result.fileName,
+      relevance: result.relevance,
     }))
 
     // Save query to database
@@ -100,7 +124,7 @@ export async function POST(req: NextRequest) {
         queryId: savedQuery.id,
         responseTimeMs,
         responseType,
-        topics: [], // Could extract topics using NLP in the future
+        topics: [],
       },
     })
 
