@@ -188,11 +188,11 @@ export function ChatInterface() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Header with controls */}
       <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-900">
-          Adhyapak Shathi
+          Chat Assistant
         </h1>
         <div className="flex items-center gap-1">
           <Button

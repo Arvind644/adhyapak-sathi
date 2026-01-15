@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { UserButton } from '@clerk/nextjs'
-import { Upload, Trash2, Search, Tag, FileText, Save, AlertCircle, CheckCircle } from 'lucide-react'
+import { useUser } from '@clerk/nextjs'
+import { Upload, Trash2, Search, Tag, FileText, Save, AlertCircle, CheckCircle, User, Mail, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Navbar } from '@/components/navbar'
 
 interface LessonPlan {
   id: string
@@ -132,16 +133,8 @@ export default function ProfilePage() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.push('/dashboard')}>
-            Back to Chat
-          </Button>
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <Card className="p-6 mb-6">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BarChart3, TrendingUp, Clock, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Navbar } from '@/components/navbar'
 
 interface Analytics {
   totalQueries: number
@@ -40,13 +41,8 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Analytics Dashboard</h1>
-        <Button variant="outline" onClick={() => router.push('/dashboard')}>
-          Back to Chat
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Time Range Selector */}
