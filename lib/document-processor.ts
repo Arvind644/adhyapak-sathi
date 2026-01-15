@@ -1,6 +1,6 @@
 // Document processing utilities
-// Note: pdf-parse and mammoth require Node.js 20.16+ or 22.3+
-// These will be imported conditionally or with fallbacks
+import pdfParse from 'pdf-parse'
+import mammoth from 'mammoth'
 
 export interface ProcessedDocument {
   text: string
@@ -56,34 +56,25 @@ export function chunkText(text: string, metadata?: Record<string, any>): Array<{
   return chunks
 }
 
-// PDF processing (requires pdf-parse)
+// PDF processing
 export async function processPDF(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import to handle version issues
-    const pdfParse = await import('pdf-parse').catch(() => null)
-    if (!pdfParse) {
-      throw new Error('pdf-parse is not available. Please upgrade Node.js to 20.16+ or install pdf-parse manually.')
-    }
-    const data = await pdfParse.default(buffer)
+    const data = await pdfParse(buffer)
     return data.text
   } catch (error) {
     console.error('Error processing PDF:', error)
-    throw new Error('Failed to process PDF file')
+    throw new Error('Failed to process PDF file. Please ensure the file is a valid PDF.')
   }
 }
 
-// Word document processing (requires mammoth)
+// Word document processing
 export async function processWord(buffer: Buffer): Promise<string> {
   try {
-    const mammoth = await import('mammoth').catch(() => null)
-    if (!mammoth) {
-      throw new Error('mammoth is not available. Please install mammoth manually.')
-    }
-    const result = await mammoth.default.extractRawText({ buffer })
+    const result = await mammoth.extractRawText({ buffer })
     return result.value
   } catch (error) {
     console.error('Error processing Word document:', error)
-    throw new Error('Failed to process Word document')
+    throw new Error('Failed to process Word document. Please ensure the file is a valid Word document.')
   }
 }
 
