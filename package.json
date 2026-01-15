@@ -13,7 +13,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "create-env": "node scripts/create-env-example.js"
+    "create-env": "node scripts/create-env-example.js",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.7.0",
