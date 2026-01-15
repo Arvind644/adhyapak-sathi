@@ -6,7 +6,7 @@ import { deleteDocumentChunks } from '@/lib/document-chunks'
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth()
@@ -22,8 +22,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    const { id } = await params
     const lessonPlan = await db.lessonPlan.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!lessonPlan) {
@@ -53,7 +54,7 @@ export async function DELETE(
 
     // Delete lesson plan using Prisma
     await db.lessonPlan.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true })
