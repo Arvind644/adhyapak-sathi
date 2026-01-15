@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
@@ -9,7 +9,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await db.user.findUnique({
+    const clerkUser = await currentUser()
+    if (!clerkUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get or create user in database
+    let user = await db.user.findUnique({
       where: { clerkUserId: userId },
       select: {
         name: true,
@@ -19,7 +25,21 @@ export async function GET() {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      // Create user if doesn't exist
+      const newUser = await db.user.create({
+        data: {
+          clerkUserId: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress || '',
+          name: clerkUser.firstName && clerkUser.lastName
+            ? `${clerkUser.firstName} ${clerkUser.lastName}`
+            : clerkUser.firstName || clerkUser.emailAddresses[0]?.emailAddress || 'User',
+        },
+      })
+      user = {
+        name: newUser.name,
+        email: newUser.email,
+        subjects: newUser.subjects,
+      }
     }
 
     return NextResponse.json(user)
@@ -39,6 +59,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const clerkUser = await currentUser()
+    if (!clerkUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
     const body = await req.json()
     const { name, email, subjects } = body as {
       name?: string
@@ -53,14 +78,26 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    const user = await db.user.findUnique({
+    // Get or create user in database
+    let user = await db.user.findUnique({
       where: { clerkUserId: userId },
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      // Create user if doesn't exist
+      user = await db.user.create({
+        data: {
+          clerkUserId: userId,
+          email: email || clerkUser.emailAddresses[0]?.emailAddress || '',
+          name: name || (clerkUser.firstName && clerkUser.lastName
+            ? `${clerkUser.firstName} ${clerkUser.lastName}`
+            : clerkUser.firstName || clerkUser.emailAddresses[0]?.emailAddress || 'User'),
+          subjects: Array.isArray(subjects) ? subjects : [],
+        },
+      })
     }
 
+    // Update user
     const updated = await db.user.update({
       where: { clerkUserId: userId },
       data: {
