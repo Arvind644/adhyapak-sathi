@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { Upload, Trash2, Search, Tag, FileText } from 'lucide-react'
+import { Upload, Trash2, Search, Tag, FileText, Save, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
@@ -23,10 +23,63 @@ export default function ProfilePage() {
   const [showUpload, setShowUpload] = useState(false)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [subjects, setSubjects] = useState<string>('')
+  const [profileStatus, setProfileStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  const [profileError, setProfileError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchLessonPlans()
   }, [selectedTag])
+
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch('/api/profile')
+      if (res.ok) {
+        const data = await res.json()
+        setName(data.name || '')
+        setEmail(data.email || '')
+        setSubjects((data.subjects || []).join(', '))
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    setProfileStatus('saving')
+    setProfileError(null)
+    try {
+      const payload = {
+        name,
+        email,
+        subjects: subjects
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      }
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to save profile')
+      }
+      setProfileStatus('success')
+      setTimeout(() => setProfileStatus('idle'), 2000)
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      setProfileError(error instanceof Error ? error.message : 'Failed to save')
+      setProfileStatus('error')
+    }
+  }
 
   const fetchLessonPlans = async () => {
     try {
@@ -91,6 +144,75 @@ export default function ProfilePage() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
+              <p className="text-sm text-gray-500">Update your basic details and subjects</p>
+            </div>
+            <Button onClick={handleSaveProfile} disabled={profileStatus === 'saving'}>
+              {profileStatus === 'saving' ? (
+                'Saving...'
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </>
+              )}
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subjects (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={subjects}
+                onChange={(e) => setSubjects(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Math, Science, English"
+              />
+            </div>
+          </div>
+          {profileStatus === 'success' && (
+            <div className="mt-3 flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+              <CheckCircle className="h-4 w-4" />
+              <span>Profile updated</span>
+            </div>
+          )}
+          {profileStatus === 'error' && (
+            <div className="mt-3 flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+              <AlertCircle className="h-4 w-4" />
+              <span>{profileError || 'Failed to save profile'}</span>
+            </div>
+          )}
+        </Card>
+
         <Card className="p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-gray-900">Lesson Plans</h2>
