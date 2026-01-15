@@ -4,6 +4,8 @@ import { db } from '@/lib/db'
 import { hybridSearch } from '@/lib/vector-search'
 import { generateResponse, generateEmbedding } from '@/lib/openai'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()

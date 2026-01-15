@@ -5,6 +5,8 @@ import { uploadFile } from '@/lib/vercel-blob'
 import { processDocument } from '@/lib/document-processor'
 import { createDocumentChunks } from '@/lib/document-chunks'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()

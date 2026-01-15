@@ -4,6 +4,8 @@ import { db } from '@/lib/db'
 import { deleteFile } from '@/lib/vercel-blob'
 import { deleteDocumentChunks } from '@/lib/document-chunks'
 
+export const dynamic = 'force-dynamic'
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
