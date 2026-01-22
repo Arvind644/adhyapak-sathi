@@ -25,11 +25,11 @@ export function Navbar() {
           {/* Logo/Brand */}
           <Link href="/dashboard" className="flex items-center group">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="Adhyapak Shathi"
-              width={220}
-              height={55}
-              className="h-14 w-auto group-hover:scale-105 transition-transform"
+              width={260}
+              height={65}
+              className="h-16 w-auto group-hover:scale-105 transition-transform"
               priority
             />
           </Link>

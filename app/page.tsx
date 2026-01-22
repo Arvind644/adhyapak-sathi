@@ -105,11 +105,11 @@ export default function Home() {
       <nav className="container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center">
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             alt="Adhyapak Shathi"
-            width={240}
-            height={60}
-            className="h-14 w-auto"
+            width={300}
+            height={75}
+            className="h-20 w-auto"
             priority
           />
         </div>
@@ -336,11 +336,11 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center mb-4 md:mb-0">
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Adhyapak Shathi"
-                width={160}
-                height={40}
-                className="h-10 w-auto brightness-0 invert"
+                width={240}
+                height={60}
+                className="h-16 w-auto opacity-80 saturate-90 hover:opacity-100 hover:saturate-100 transition-all duration-300 drop-shadow-[0_0_8px_rgba(121,71,191,0.2)]"
               />
             </div>
             <p className="text-sm">
