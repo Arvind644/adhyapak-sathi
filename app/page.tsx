@@ -5,6 +5,7 @@ import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import Image from 'next/image'
 import {
   MessageCircle,
   Mic,
@@ -102,13 +103,15 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Navigation */}
       <nav className="container mx-auto px-4 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Adhyapak Shathi
-          </span>
+        <div className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="Adhyapak Shathi"
+            width={300}
+            height={75}
+            className="h-20 w-auto"
+            priority
+          />
         </div>
         <div className="flex items-center gap-3">
           <SignInButton mode="modal">
@@ -331,13 +334,14 @@ export default function Home() {
       <footer className="bg-gray-900 text-gray-400 py-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-white">
-                Adhyapak Shathi
-              </span>
+            <div className="flex items-center mb-4 md:mb-0">
+              <Image
+                src="/logo.svg"
+                alt="Adhyapak Shathi"
+                width={240}
+                height={60}
+                className="h-16 w-auto opacity-80 saturate-90 hover:opacity-100 hover:saturate-100 transition-all duration-300 drop-shadow-[0_0_8px_rgba(121,71,191,0.2)]"
+              />
             </div>
             <p className="text-sm">
               © 2024 Adhyapak Shathi. Built for ShikshaLokam Hackathon.
